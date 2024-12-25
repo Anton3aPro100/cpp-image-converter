@@ -37,7 +37,11 @@ Image LoadPPM(const Path& file) {
     // открываем поток с флагом ios::binary
     // поскольку будем читать данные в двоичном формате
     ifstream ifs(file, ios::binary);
-    std::string sign;
+    if (!ifs) {
+       return {};
+   }
+    
+    string sign;
     int w, h, color_max;
 
     // читаем заголовок: он содержит формат, размеры изображения

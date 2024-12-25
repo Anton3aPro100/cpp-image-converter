@@ -39,7 +39,6 @@ static int GetBMPStride(int w) {
     return 4 * ((w * 3 + 3) / 4);
 }
 
-// напишите эту функцию
 bool SaveBMP(const Path& file, const Image& image){
     
     const int w = image.GetWidth();
@@ -50,10 +49,9 @@ bool SaveBMP(const Path& file, const Image& image){
     
     bmpFileHeader.bfType = (static_cast<uint16_t>('M') << 8) | static_cast<uint16_t>('B');     
     bmpFileHeader.bfSize = h * GetBMPStride(w) + 54;      
-    bmpFileHeader.bfReserved = 0; 
-    
+    bmpFileHeader.bfReserved = 0;    
     bmpFileHeader.bfOffBits = 54; 
-    
+   
     BitmapInfoHeader bmpInfoHeader;
     
     bmpInfoHeader.biSize = 40;
@@ -69,13 +67,8 @@ bool SaveBMP(const Path& file, const Image& image){
     bmpInfoHeader.biClrImportant = 0x1000000;
     
     ofstream out(file, ios::binary);
-    
-    
     out.write(reinterpret_cast<const char*>(&bmpFileHeader), sizeof(bmpFileHeader));
     out.write(reinterpret_cast<const char*>(&bmpInfoHeader), sizeof(bmpInfoHeader));
-
-
-  
    
     std::vector<char> buff(w * 3);
     for (int y = h - 1; y >= 0; --y) {
@@ -91,7 +84,6 @@ bool SaveBMP(const Path& file, const Image& image){
             out.put(0); // Добавление нуля в качестве дополнения
         }
     }
-
     return out.good();
 }
 
@@ -110,6 +102,37 @@ Image LoadBMP(const Path& file){
     ifs.read(reinterpret_cast<char*>(&bfh), sizeof(bfh));
     ifs.read(reinterpret_cast<char*>(&bih), sizeof(bih)); 
     
+    // Проверка bfh
+    if (bfh.bfType != 0x4D42) { // 'BM' в шестнадцатиричном представлении
+        //"Неверный тип файла BMP."
+        return {};
+    }
+    
+    streampos currentPos = ifs.tellg(); // Сохраняем положение в файле
+    ifs.seekg(0, istream::end);          // Переходим в конец файла
+    streampos fileSize = ifs.tellg();    // Получаем размер файла
+    ifs.seekg(currentPos);                     // Возвращаемся на исходную позицию
+    if (bfh.bfSize != fileSize) {
+        // "Размер файла не совпадает с указанным в заголовке." 
+        return {};
+    }
+    
+    if (bfh.bfOffBits < sizeof(bfh) + sizeof(bih) || bfh.bfOffBits > bfh.bfSize) {
+        //"Неверное смещение данных изображения."
+        return {};
+    }
+    // Проверка bih
+    if (bih.biBitCount != 24) {
+       //"Неподдерживаемый формат цвета."
+        return {};
+    }
+    if (bih.biWidth <= 0 || bih.biHeight <= 0) {
+        // "Неверные размеры изображения." 
+        return {};
+    }
+    // Конец проверки 
+    
+  
     int w = bih.biWidth;
     int h = bih.biHeight;
     int padding = (4 - (w * 3) % 4) % 4;
